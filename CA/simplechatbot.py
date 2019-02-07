@@ -1,0 +1,79 @@
+
+import nltk
+import numpy as np
+import random
+import string
+#from pattern.es import lemma
+from nltk.corpus import stopwords
+from sklearn.feature_extraction.text import TfidfVectorizer
+
+from sklearn.metrics.pairwise import cosine_similarity
+STOP = set(nltk.corpus.stopwords.words("english"))
+
+f=open('testing.txt','r',errors = 'ignore')
+raw=f.read()
+raw=raw.lower()
+nltk.download('punkt')
+nltk.download('wordnet')
+sent_tokens = nltk.sent_tokenize(raw)
+word_tokens = nltk.word_tokenize(raw)
+lemmer = nltk.stem.WordNetLemmatizer()
+
+def LemTokens(tokens):
+    return [lemmer.lemmatize(token) for token in tokens]
+remove_punct_dict = dict((ord(punct), None) for punct in string.punctuation)
+def LemNormalize(text):
+    return LemTokens(nltk.word_tokenize(text.lower().translate(remove_punct_dict)))
+
+
+GREETING_INPUTS = ("hello", "hi", "greetings", "sup", "what's up", "hey",)
+GREETING_RESPONSES = ["hi", "hey", "*nods*", "hi there", "hello", "I am glad! You are talking to me"]
+
+
+def greeting(sentence):
+    for word in sentence.split():
+        if word.lower() in GREETING_INPUTS:
+            return random.choice(GREETING_RESPONSES)
+
+def response(user_response):
+    robo_response=''
+    sent_tokens.append(user_response)
+    #my_stop_words = [lemma(t) for t in stopwords.words('english')]
+    #TfidfVec = TfidfVectorizer(stop_words=my_stop_words,
+                               #  tokenizer=LemmaTokenizer())
+    TfidfVec = TfidfVectorizer(tokenizer=LemNormalize, stop_words=STOP)
+    tfidf = TfidfVec.fit_transform(sent_tokens)
+    vals = cosine_similarity(tfidf[-1], tfidf)
+    idx=vals.argsort()[0][-2]
+    flat = vals.flatten()
+    flat.sort()
+    req_tfidf = flat[-2]
+    if(req_tfidf==0):
+        robo_response=robo_response+"I am sorry! I don't understand you"
+        return robo_response
+    else:
+        robo_response = robo_response+sent_tokens[idx]
+        return robo_response
+flag=True
+print("ROBO: My name is Robo. I will answer your queries about SoftwareTesting. If you want to exit, type Bye!")
+while(flag==True):
+    user_response = input()
+    user_response=user_response.lower()
+    if(user_response!='bye'):
+        if(user_response=='thanks' or user_response=='thank you' ):
+            flag=False
+            print("ROBO: You are welcome..")
+        else:
+            if(greeting(user_response)!=None):
+                print("ROBO: "+greeting(user_response))
+            else:
+                print("ROBO: ",end="")
+                print(response(user_response))
+                sent_tokens.remove(user_response)
+    else:
+        flag=False
+        print("ROBO: Bye! take care..")
+
+
+
+#using "TestFlow: Simulate Conversations with Your Alexa Skill Code to Ease Debugging" and https://medium.com/Building a Chatbot(using NLTK)
